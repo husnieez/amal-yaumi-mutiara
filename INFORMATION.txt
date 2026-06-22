@@ -1,0 +1,16 @@
+🤝 Kontribusi untuk Asrama Mutiara & YMMI
+Proyek ini adalah open source dan dikelola secara sukarela. Kami mengundang seluruh alumni, pengurus, donatur, dan pengembang untuk:
+  
+  ✅ Menggunakan aplikasi ini di lingkungan asrama atau yayasan.
+  💬 Memberikan saran fitur atau melaporkan bug melalui issue.
+  💻 Berkontribusi dalam kode, dokumentasi, atau desain UI.
+  📢 Menyebarluaskan agar lebih banyak komunitas mendapat manfaat.
+
+Cara Berkontribusi
+
+  Fork repositori.
+  Buat branch fitur: git checkout -b fitur-anda.
+  Commit perubahan: git commit -m 'Menambahkan fitur X'.
+  Push: git push origin fitur-anda.
+  Ajukan Pull Request.
+  Untuk koordinasi lebih lanjut, hubungi pengurus YMMI atau tim pengembang.
