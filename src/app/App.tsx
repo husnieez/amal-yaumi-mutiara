@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BookOpen, Moon, Users, Bell, LogOut, Check, X, Plus, Send,
   BarChart2, Calendar, Shield, User, ChevronDown, ChevronLeft,
@@ -9,10 +9,11 @@ import {
   CartesianGrid, LineChart, Line,
 } from "recharts";
 import {
-  loadUsers, saveUsers, loadLogs, saveLogs, loadMonths, saveMonths,
-  loadNotifications, saveNotifications, PRACTICES, UserRecord, Role,
-  DailyLog, MonthRecord, Notification
-} from "./db";
+  PRACTICES, UserRecord, Role, DailyLog, MonthRecord, Notification,
+  fetchUsers, fetchLogs, fetchMonths, fetchNotifications, fetchPractices,
+  insertLog, deleteLog, insertUser, updateUserRole, insertMonth,
+  setActiveMonth, insertNotification, markNotificationRead
+} from "./lib/db";
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 // We use 2025-0M-DD format for all demo logs (month = MonthRecord.month)
@@ -73,69 +74,24 @@ function ProgressBar({ value, size = "md" }: { value: number; size?: "sm" | "md"
 // ── Login ──────────────────────────────────────────────────────────────────
 function LoginScreen({
   onLogin,
-  onRegister,
   users,
 }: {
   onLogin: (u: UserRecord) => void;
-  onRegister: (name: string, email: string, role: Role, coordinatorId?: string) => UserRecord;
   users: UserRecord[];
 }) {
-  const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
-  const [search, setSearch] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-  // Sign up form state
-  const [regName, setRegName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regRole, setRegRole] = useState<Role>("user");
-  const [regCoordId, setRegCoordId] = useState("");
-
-  const coordinators = useMemo(() => {
-    return users.filter((u) => u.role === "coordinator" || u.role === "admin");
-  }, [users]);
-
-  // Set default selected coordinator if registering as a member
-  useMemo(() => {
-    if (coordinators.length > 0 && !regCoordId) {
-      setRegCoordId(coordinators[0].id);
-    }
-  }, [coordinators, regCoordId]);
-
-  // Filtered users for search in Sign In
-  const filteredUsers = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return users;
-    return users.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
-  }, [users, search]);
-
-  const handleSignIn = () => {
-    const u = users.find((x) => x.id === selectedUserId);
-    if (u) {
-      onLogin(u);
-    }
-  };
-
-  const handleSignUpSubmit = (e: React.FormEvent) => {
+  const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim() || !regEmail.trim()) return;
-    const newUser = onRegister(
-      regName.trim(),
-      regEmail.trim(),
-      regRole,
-      regRole === "user" ? regCoordId : undefined
-    );
-    // Auto login
-    onLogin(newUser);
+    const u = users.find((x) => x.email.toLowerCase() === email.toLowerCase().trim());
+    if (u) {
+      setError("");
+      onLogin(u);
+    } else {
+      setError("Email not found. Please contact an administrator.");
+    }
   };
-
-  const demoAccounts = [
-    { id: "u3", desc: "Member — Ibrahim Hassan" },
-    { id: "u2", desc: "Coordinator — Fatimah Noor" },
-    { id: "u1", desc: "Administrator — Ahmad Yusuf" },
-  ];
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 transition-colors duration-300" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -148,226 +104,37 @@ function LoginScreen({
           <p className="text-sm text-muted-foreground font-light">Daily spiritual practice record</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden transition-all duration-300">
-          {/* Tabs */}
-          <div className="flex border-b border-border bg-secondary/20">
+        <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden p-6">
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="Enter your registered email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-900/10 border border-red-700/20 rounded p-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-red-300">{error}</p>
+              </div>
+            )}
+
             <button
-              onClick={() => setActiveTab("signin")}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
-                activeTab === "signin"
-                  ? "border-primary text-primary bg-card"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+              type="submit"
+              disabled={!email.trim()}
+              className="w-full py-2.5 mt-2 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/95 transition-all shadow-sm active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
             >
               Sign In
             </button>
-            <button
-              onClick={() => setActiveTab("signup")}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
-                activeTab === "signup"
-                  ? "border-primary text-primary bg-card"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-
-          <div className="p-6">
-            {activeTab === "signin" ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2">
-                    Search or Select User
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <Search className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Type email or name..."
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
-                        setShowUserDropdown(true);
-                      }}
-                      onFocus={() => setShowUserDropdown(true)}
-                      className="w-full bg-secondary border border-border rounded px-9 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                    />
-                    {search && (
-                      <button
-                        onClick={() => setSearch("")}
-                        className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {showUserDropdown && (
-                    <div className="absolute z-10 mt-1 w-[calc(100%-3rem)] max-h-56 bg-card border border-border rounded shadow-xl overflow-y-auto divide-y divide-border/50">
-                      {filteredUsers.length === 0 ? (
-                        <div className="p-3 text-xs text-muted-foreground text-center">
-                          No users found
-                        </div>
-                      ) : (
-                        filteredUsers.map((u) => (
-                          <button
-                            key={u.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedUserId(u.id);
-                              setSearch(u.name);
-                              setShowUserDropdown(false);
-                            }}
-                            className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-secondary/40 transition-colors"
-                          >
-                            <AvatarBadge initials={u.avatar} size="sm" role={u.role} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-foreground truncate">{u.name}</span>
-                                <RolePill role={u.role} />
-                              </div>
-                              <span className="text-[10px] font-mono text-muted-foreground block truncate">{u.email}</span>
-                            </div>
-                            {selectedUserId === u.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {selectedUserId && (
-                  <div className="bg-secondary/20 border border-border/40 rounded p-3 flex items-center gap-3 animate-fadeIn">
-                    {(() => {
-                      const u = users.find((x) => x.id === selectedUserId);
-                      if (!u) return null;
-                      return (
-                        <>
-                          <AvatarBadge initials={u.avatar} role={u.role} size="md" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono truncate">{u.email}</p>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSignIn}
-                  disabled={!selectedUserId}
-                  className="w-full py-2.5 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/95 transition-all shadow-sm active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  Sign In
-                </button>
-
-                <div className="pt-4 border-t border-border/60">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3">
-                    Quick Demo Accounts
-                  </p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {demoAccounts.map(({ id, desc }) => {
-                      const u = users.find((x) => x.id === id);
-                      if (!u) return null;
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedUserId(u.id);
-                            setSearch(u.name);
-                            setShowUserDropdown(false);
-                          }}
-                          className={`flex items-center justify-between p-2 rounded text-xs text-left border transition-all ${
-                            selectedUserId === id
-                              ? "bg-primary/10 border-primary/40 text-primary"
-                              : "bg-secondary/10 border-border/40 text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
-                          }`}
-                        >
-                          <span>{desc}</span>
-                          <RolePill role={u.role} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSignUpSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1.5">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ibrahim Hassan"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1.5">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. ibrahim@example.com"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1.5">
-                    Role
-                  </label>
-                  <select
-                    value={regRole}
-                    onChange={(e) => setRegRole(e.target.value as Role)}
-                    className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                  >
-                    <option value="user">Member</option>
-                    <option value="coordinator">Coordinator</option>
-                  </select>
-                </div>
-
-                {regRole === "user" && coordinators.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1.5">
-                      Select Coordinator
-                    </label>
-                    <select
-                      value={regCoordId}
-                      onChange={(e) => setRegCoordId(e.target.value)}
-                      className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                    >
-                      {coordinators.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.role === "admin" ? "Admin" : "Coordinator"})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 mt-2 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/95 transition-all shadow-sm active:scale-[0.99]"
-                >
-                  Create Account & Login
-                </button>
-              </form>
-            )}
-          </div>
+          </form>
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8 font-mono">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
@@ -387,7 +154,7 @@ function Sidebar({ currentUser, active, setView, onLogout, unread, months }: {
     { id: "peers",         label: "Community",     icon: Users },
     { id: "notifications", label: "Notifications", icon: Bell, badge: unread },
   ];
-  const coordLinks = [...userLinks, { id: "group", label: "My Group", icon: Shield }];
+  const coordLinks = [...userLinks, { id: "group", label: "My Group", icon: Shield }, { id: "admin-months", label: "Months", icon: Calendar }];
   const adminLinks = [
     { id: "admin-users",   label: "Users",   icon: User },
     { id: "admin-months",  label: "Months",  icon: Calendar },
@@ -959,7 +726,7 @@ function GroupView({ currentUser, logs, notifications, setNotifications, allUser
   currentUser: UserRecord; logs: DailyLog[]; notifications: Notification[]; setNotifications: (n: Notification[]) => void; allUsers: UserRecord[]; months: MonthRecord[];
 }) {
   const activeMonth = months.find((m) => m.active)!;
-  const members = allUsers.filter((u) => u.coordinatorId === currentUser.id);
+  const members = allUsers.filter((u) => u.role === "user");
   const [sendTo, setSendTo] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
@@ -1162,10 +929,11 @@ function AdminUsers({ users, setUsers }: { users: UserRecord[]; setUsers: (u: Us
 // ── Admin: Months ──────────────────────────────────────────────────────────
 function AdminMonths({ months, setMonths }: { months: MonthRecord[]; setMonths: (m: MonthRecord[]) => void }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ label: "", year: 2025, month: 4, days: 30 });
+  const [form, setForm] = useState({ monthStr: "January", year: 2025, month: 1, days: 31 });
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const addMonth = () => {
-    if (!form.label) return;
-    setMonths([...months, { id: `m${Date.now()}`, ...form, active: false }]);
+    const label = `${form.monthStr} ${form.year}`;
+    setMonths([...months, { id: `m${Date.now()}`, label, year: form.year, month: form.month, days: form.days, active: false }]);
     setShowAdd(false);
   };
   const setActive = (id: string) => setMonths(months.map((m) => ({ ...m, active: m.id === id })));
@@ -1201,12 +969,17 @@ function AdminMonths({ months, setMonths }: { months: MonthRecord[]; setMonths: 
           <div className="bg-card border border-border rounded-lg w-full max-w-sm p-6">
             <h3 className="text-base font-medium text-foreground mb-4" style={{ fontFamily: "'Crimson Pro', serif" }}>Add new month</h3>
             <div className="space-y-3">
-              <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="e.g. Rajab 1446"
-                className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors" />
-              <div className="grid grid-cols-3 gap-2">
+              <select value={form.month} onChange={(e) => {
+                  const m = +e.target.value;
+                  setForm({ ...form, month: m, monthStr: monthNames[m - 1] });
+                }}
+                className="w-full bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/40 transition-colors">
+                {monthNames.map((name, i) => (
+                  <option key={name} value={i + 1}>{name}</option>
+                ))}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
                 <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: +e.target.value })} placeholder="Year"
-                  className="bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/40 transition-colors" />
-                <input type="number" min={1} max={12} value={form.month} onChange={(e) => setForm({ ...form, month: +e.target.value })} placeholder="Month"
                   className="bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/40 transition-colors" />
                 <input type="number" min={28} max={31} value={form.days} onChange={(e) => setForm({ ...form, days: +e.target.value })} placeholder="Days"
                   className="bg-secondary border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/40 transition-colors" />
@@ -1224,11 +997,21 @@ function AdminMonths({ months, setMonths }: { months: MonthRecord[]; setMonths: 
 }
 
 // ── Admin: Reports ─────────────────────────────────────────────────────────
-function AdminReports({ users, logs, months }: { users: UserRecord[]; logs: DailyLog[]; months: MonthRecord[] }) {
+function AdminReports({ users, logs, months, notifications }: { users: UserRecord[]; logs: DailyLog[]; months: MonthRecord[]; notifications: Notification[] }) {
   const [selectedMonthId, setSelectedMonthId] = useState(months.find((m) => m.active)!.id);
   const month = months.find((m) => m.id === selectedMonthId)!;
   const members = users.filter((u) => u.role === "user");
   const coordinators = users.filter((u) => u.role === "coordinator");
+
+  // Get last 7 days of the selected month
+  const last7Days = Array.from({ length: 7 }, (_, i) => Math.max(1, month.days - i)).map(d => dateKey(month, d));
+
+  const getWeeklyPct = (userId: string) => {
+    const done = logs.filter(l => l.userId === userId && last7Days.includes(l.date) && l.completed).length;
+    return Math.round((done / (7 * PRACTICES.length)) * 100) || 0;
+  };
+
+  const getReminders = (userId: string) => notifications.filter(n => n.toId === userId).length;
 
   const practiceStats = PRACTICES.map((p) => {
     const avg = members.reduce((s, u) => s + completedDays(logs, u.id, p.id, month), 0) / (members.length || 1);
@@ -1302,13 +1085,16 @@ function AdminReports({ users, logs, months }: { users: UserRecord[]; logs: Dail
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-5 py-2.5 text-muted-foreground font-normal">Member</th>
-                {PRACTICES.map((p) => <th key={p.id} className="text-center px-3 py-2.5 text-muted-foreground font-normal">{p.icon}</th>)}
-                <th className="text-right px-5 py-2.5 text-muted-foreground font-normal">Overall</th>
+                <th className="text-center px-3 py-2.5 text-muted-foreground font-normal">Reminders</th>
+                <th className="text-right px-5 py-2.5 text-muted-foreground font-normal">Weekly Avg</th>
+                <th className="text-right px-5 py-2.5 text-muted-foreground font-normal">Monthly Avg</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {members.map((member) => {
                 const overall = overallPct(logs, member.id, month);
+                const weekly = getWeeklyPct(member.id);
+                const reminders = getReminders(member.id);
                 return (
                   <tr key={member.id} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-5 py-3">
@@ -1317,21 +1103,61 @@ function AdminReports({ users, logs, months }: { users: UserRecord[]; logs: Dail
                         <span className="text-foreground">{member.name}</span>
                       </div>
                     </td>
-                    {PRACTICES.map((p) => {
-                      const done = completedDays(logs, member.id, p.id, month);
-                      const progress = pct(done, p.target);
-                      return (
-                        <td key={p.id} className="text-center px-3 py-3">
-                          <span className={progress >= 80 ? "text-emerald-400" : progress >= 50 ? "text-primary" : "text-red-400"}>{done}/{p.target}</span>
-                        </td>
-                      );
-                    })}
+                    <td className="text-center px-3 py-3">
+                      <span className="text-muted-foreground">{reminders}</span>
+                    </td>
+                    <td className="text-right px-5 py-3">
+                      <span className={`font-medium ${weekly >= 80 ? "text-emerald-400" : weekly >= 50 ? "text-primary" : "text-red-400"}`}>{weekly}%</span>
+                    </td>
                     <td className="text-right px-5 py-3">
                       <span className={`font-medium ${overall >= 80 ? "text-emerald-400" : overall >= 50 ? "text-primary" : "text-red-400"}`}>{overall}%</span>
                     </td>
                   </tr>
                 );
               })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Notification Logs */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden mt-6">
+        <div className="px-5 py-3 border-b border-border">
+          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Notification History Log</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs font-mono">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-5 py-2.5 text-muted-foreground font-normal">Date</th>
+                <th className="text-left px-5 py-2.5 text-muted-foreground font-normal">From</th>
+                <th className="text-left px-5 py-2.5 text-muted-foreground font-normal">To</th>
+                <th className="text-left px-5 py-2.5 text-muted-foreground font-normal">Message</th>
+                <th className="text-center px-5 py-2.5 text-muted-foreground font-normal">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {notifications.slice().reverse().map(n => {
+                const from = users.find(u => u.id === n.fromId)?.name || "Unknown";
+                const to = users.find(u => u.id === n.toId)?.name || "Unknown";
+                const date = new Date(n.sentAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <tr key={n.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-5 py-3 whitespace-nowrap text-muted-foreground">{date}</td>
+                    <td className="px-5 py-3">{from}</td>
+                    <td className="px-5 py-3">{to}</td>
+                    <td className="px-5 py-3 max-w-xs truncate" title={n.message}>{n.message}</td>
+                    <td className="px-5 py-3 text-center">
+                      {n.read ? <span className="text-emerald-400">Read</span> : <span className="text-muted-foreground">Unread</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+              {notifications.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-4 text-center text-muted-foreground">No notifications sent yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1348,43 +1174,105 @@ export default function App() {
   const [view, setView] = useState(() => {
     return localStorage.getItem("amal_tracker_current_view") || "home";
   });
-  const [logs, setLogsState] = useState<DailyLog[]>(() => loadLogs());
-  const [users, setUsersState] = useState<UserRecord[]>(() => loadUsers());
-  const [months, setMonthsState] = useState<MonthRecord[]>(() => loadMonths());
-  const [notifications, setNotificationsState] = useState<Notification[]>(() => loadNotifications());
+  const [logs, setLogsState] = useState<DailyLog[]>([]);
+  const [users, setUsersState] = useState<UserRecord[]>([]);
+  const [months, setMonthsState] = useState<MonthRecord[]>([]);
+  const [notifications, setNotificationsState] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      try {
+        const [u, l, m, n] = await Promise.all([
+          fetchUsers(),
+          fetchLogs(),
+          fetchMonths(),
+          fetchNotifications(),
+        ]);
+        if (active) {
+          setUsersState(u);
+          setLogsState(l);
+          setMonthsState(m);
+          setNotificationsState(n);
+        }
+      } catch (error) {
+        console.error("Error loading data from Supabase:", error);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const currentUser = useMemo(() => users.find((u) => u.id === currentUserId) || null, [users, currentUserId]);
 
-  const setLogs = (newLogs: DailyLog[]) => {
+  const setLogs = async (newLogs: DailyLog[]) => {
+    // Determine the difference between logs and newLogs
+    const added = newLogs.find(
+      (n) => !logs.some((o) => o.userId === n.userId && o.practiceId === n.practiceId && o.date === n.date)
+    );
+    const removed = logs.find(
+      (o) => !newLogs.some((n) => o.userId === n.userId && o.practiceId === n.practiceId && o.date === n.date)
+    );
+
+    // Optimistically update frontend state
     setLogsState(newLogs);
-    saveLogs(newLogs);
-  };
-  const setUsers = (newUsers: UserRecord[]) => {
-    setUsersState(newUsers);
-    saveUsers(newUsers);
-  };
-  const setMonths = (newMonths: MonthRecord[]) => {
-    setMonthsState(newMonths);
-    saveMonths(newMonths);
-  };
-  const setNotifications = (newNotifications: Notification[]) => {
-    setNotificationsState(newNotifications);
-    saveNotifications(newNotifications);
+
+    if (added) {
+      await insertLog(added);
+    } else if (removed) {
+      await deleteLog(removed.userId, removed.date, removed.practiceId);
+    }
   };
 
-  const handleRegister = (name: string, email: string, role: Role, coordinatorId?: string): UserRecord => {
-    const initials = name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-    const newUser: UserRecord = {
-      id: `u${Date.now()}`,
-      name,
-      email,
-      role,
-      coordinatorId,
-      avatar: initials,
-    };
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    return newUser;
+  const setUsers = async (newUsers: UserRecord[]) => {
+    const added = newUsers.find((n) => !users.some((o) => o.id === n.id));
+    const updated = newUsers.find((n) => {
+      const o = users.find((x) => x.id === n.id);
+      return o && (o.role !== n.role || o.coordinatorId !== n.coordinatorId);
+    });
+
+    setUsersState(newUsers);
+
+    if (added) {
+      await insertUser(added);
+    } else if (updated) {
+      await updateUserRole(updated.id, updated.role);
+    }
+  };
+
+  const setMonths = async (newMonths: MonthRecord[]) => {
+    const added = newMonths.find((n) => !months.some((o) => o.id === n.id));
+    const activated = newMonths.find((n) => n.active && !months.find((o) => o.id === n.id)?.active);
+
+    setMonthsState(newMonths);
+
+    if (added) {
+      await insertMonth(added);
+    }
+    if (activated) {
+      await setActiveMonth(activated.id);
+    }
+  };
+
+  const setNotifications = async (newNotifications: Notification[]) => {
+    const added = newNotifications.find((n) => !notifications.some((o) => o.id === n.id));
+    const readUpdated = newNotifications.find((n) => n.read && !notifications.find((o) => o.id === n.id)?.read);
+
+    setNotificationsState(newNotifications);
+
+    if (added) {
+      await insertNotification(added);
+    } else if (readUpdated) {
+      await markNotificationRead(readUpdated.id);
+    }
   };
 
   const handleLogin = (u: UserRecord) => {
@@ -1407,8 +1295,22 @@ export default function App() {
     localStorage.setItem("amal_tracker_current_view", v);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-card border border-primary/20 mb-4 shadow-sm animate-pulse">
+            <Moon className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <h2 className="text-lg font-light text-foreground mb-1" style={{ fontFamily: "'Crimson Pro', serif" }}>Memuat Data...</h2>
+          <p className="text-xs text-muted-foreground font-mono">Menghubungkan ke Supabase</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} users={users} />;
+    return <LoginScreen onLogin={handleLogin} users={users} />;
   }
 
   const unread = notifications.filter((n) => n.toId === currentUser.id && !n.read).length;
@@ -1423,7 +1325,7 @@ export default function App() {
       case "group":         return <GroupView currentUser={currentUser} logs={logs} notifications={notifications} setNotifications={setNotifications} allUsers={users} months={months} />;
       case "admin-users":   return <AdminUsers users={users} setUsers={setUsers} />;
       case "admin-months":  return <AdminMonths months={months} setMonths={setMonths} />;
-      case "admin-reports": return <AdminReports users={users} logs={logs} months={months} />;
+      case "admin-reports": return <AdminReports users={users} logs={logs} months={months} notifications={notifications} />;
       default:              return <DailyLogView currentUser={currentUser} logs={logs} setLogs={setLogs} months={months} />;
     }
   };
@@ -1435,3 +1337,4 @@ export default function App() {
     </div>
   );
 }
+
