@@ -29,7 +29,7 @@ Dengan semangat gotong royong, kami membangun aplikasi ini sebagai wujud kontrib
 
 - **Frontend**: React + TypeScript + Vite
 - **State Management**: Context API
-- **Storage**: localStorage (development), PostgreSQL (production – skema tersedia)
+- **Storage**: PostgreSQL
 - **Styling**: Tailwind CSS (atau sesuai implementasi)
 
   ## Running the code
