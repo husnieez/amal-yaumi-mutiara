@@ -1,0 +1,211 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+
+  /* Latar & teks utama */
+  --background: #fcf9f7;
+  --foreground: #4a3f3a;
+
+  /* Card & Popover */
+  --card: #fff5f0;
+  --card-foreground: #4a3f3a;
+  --popover: #fff5f0;
+  --popover-foreground: #4a3f3a;
+
+  /* Primary (aksen utama) - pink pastel */
+  --primary: #f7a1b5;
+  --primary-foreground: #ffffff;
+
+  /* Secondary - pink sangat lembut */
+  --secondary: #fce4e8;
+  --secondary-foreground: #4a3f3a;
+
+  /* Muted - abu‑abu pink */
+  --muted: #f0e6e3;
+  --muted-foreground: #b5a09a;
+
+  /* Accent - pink muda */
+  --accent: #f7c5cb;
+  --accent-foreground: #4a3f3a;
+
+  /* Destructive - merah muda */
+  --destructive: #e57373;
+  --destructive-foreground: #ffffff;
+
+  /* Border & input */
+  --border: rgba(247, 161, 181, 0.3);
+  --input: #fce4e8;
+  --input-background: #fce4e8;
+  --switch-background: #f7c5cb;
+
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+
+  /* Ring - aksen pink transparan */
+  --ring: rgba(247, 161, 181, 0.4);
+
+  /* Warna chart */
+  --chart-1: #f7a1b5;
+  --chart-2: #f7c5cb;
+  --chart-3: #fce4e8;
+  --chart-4: #e57373;
+  --chart-5: #f7d1d9;
+
+  --radius: 0.375rem;
+
+  /* Sidebar */
+  --sidebar: #fcf9f7;
+  --sidebar-foreground: #4a3f3a;
+  --sidebar-primary: #f7a1b5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fce4e8;
+  --sidebar-accent-foreground: #4a3f3a;
+  --sidebar-border: rgba(247, 161, 181, 0.3);
+  --sidebar-ring: rgba(247, 161, 181, 0.4);
+}
+
+/* Versi dark mode yang tetap girly (background ungu tua, aksen pink) */
+.dark {
+  --background: #2d1f2b;
+  --foreground: #f5e6ea;
+
+  --card: #3d2a38;
+  --card-foreground: #f5e6ea;
+  --popover: #3d2a38;
+  --popover-foreground: #f5e6ea;
+
+  --primary: #f7a1b5;
+  --primary-foreground: #2d1f2b;
+
+  --secondary: #4d3645;
+  --secondary-foreground: #f5e6ea;
+
+  --muted: #3d2a38;
+  --muted-foreground: #b59aa8;
+
+  --accent: #6a4b5e;
+  --accent-foreground: #f5e6ea;
+
+  --destructive: #c95a5a;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(247, 161, 181, 0.25);
+  --input: #4d3645;
+  --input-background: #4d3645;
+  --switch-background: #6a4b5e;
+
+  --ring: rgba(247, 161, 181, 0.5);
+
+  --chart-1: #f7a1b5;
+  --chart-2: #d48b9f;
+  --chart-3: #b57a8c;
+  --chart-4: #c95a5a;
+  --chart-5: #e8b0c0;
+
+  --sidebar: #2d1f2b;
+  --sidebar-foreground: #f5e6ea;
+  --sidebar-primary: #f7a1b5;
+  --sidebar-primary-foreground: #2d1f2b;
+  --sidebar-accent: #4d3645;
+  --sidebar-accent-foreground: #f5e6ea;
+  --sidebar-border: rgba(247, 161, 181, 0.25);
+  --sidebar-ring: rgba(247, 161, 181, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
