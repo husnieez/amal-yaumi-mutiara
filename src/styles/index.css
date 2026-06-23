@@ -1,3 +1,19 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* PDF print-specific styles */
+body.printing-pdf .no-pdf {
+  display: none !important;
+}
+
+body.printing-pdf .recharts-responsive-container {
+  width: 100% !important;
+  height: 220px !important;
+}
+
+body.printing-pdf .max-h-\[350px\],
+body.printing-pdf .max-h-\[400px\] {
+  max-height: none !important;
+  overflow: visible !important;
+}
