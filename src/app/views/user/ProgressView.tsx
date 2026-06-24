@@ -1,7 +1,7 @@
 import { UserRecord, DailyLog, MonthRecord, PRACTICES } from "../../lib/db";
 import { getActiveMonth, getShortPracticeName, completedDays, pct, logsForMonth } from "../../lib/utils";
 import { ProgressBar } from "../../components/shared/ProgressBar";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+
 
 export function ProgressView({ currentUser, logs, months }: { currentUser: UserRecord; logs: DailyLog[]; months: MonthRecord[] }) {
   const activeMonth = getActiveMonth(months);
@@ -33,39 +33,62 @@ export function ProgressView({ currentUser, logs, months }: { currentUser: UserR
         ))}
       </div>
       
-      {/* Recharts Chart */}
+      {/* ✨ Ring Gauge Grid */}
       <div className="bg-card border border-border rounded-xl p-4 md:p-5 mb-6 shadow-sm overflow-hidden">
-        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold mb-4">Days completed vs. target</p>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={chartData} barSize={12} barGap={4} margin={{ bottom: 45, left: -10, right: 10, top: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} opacity={0.4} />
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: "var(--muted-foreground)", fontSize: 8.5 }} 
-              angle={-45} 
-              textAnchor="end" 
-              interval={0}
-              height={55}
-              axisLine={false} 
-              tickLine={false} 
-            />
-            <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} width={24} />
-            <Tooltip 
-              contentStyle={{ 
-                background: "var(--card)", 
-                border: "1px solid var(--border)", 
-                borderRadius: 8, 
-                fontSize: 11, 
-                fontFamily: "Plus Jakarta Sans", 
-                color: "var(--foreground)" 
-              }} 
-              cursor={{ fill: "var(--secondary)", opacity: 0.15 }} 
-            />
-            <Bar dataKey="target" fill="var(--secondary)" opacity={0.5} radius={[3,3,0,0]} name="Target" />
-            <Bar dataKey="done"   fill="var(--primary)"   radius={[3,3,0,0]} name="Completed" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold">Capaian vs Target</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Tap untuk detail masing-masing amalan</p>
+          </div>
+          <div className="text-2xl font-mono font-bold text-primary">{overall}%</div>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+          {chartData.map((d) => {
+            const r = 26;
+            const circ = 2 * Math.PI * r;
+            const filled = Math.min(d.pct, 100);
+            const offset = circ * (1 - filled / 100);
+            const color = d.pct >= 80 ? "#10b981" : d.pct >= 40 ? "var(--primary)" : "#f43f5e";
+            const trackColor = d.pct >= 80 ? "#10b98122" : d.pct >= 40 ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "#f43f5e22";
+            const pInfo = PRACTICES.find((p) => p.id === d.id) || PRACTICES[0];
+            return (
+              <div
+                key={d.id}
+                className="flex flex-col items-center gap-2 p-2.5 rounded-2xl bg-secondary/10 hover:bg-secondary/20 active:scale-95 transition-all duration-200 cursor-default"
+              >
+                {/* SVG Ring */}
+                <div className="relative" style={{ width: 64, height: 64 }}>
+                  <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)' }}>
+                    {/* Track */}
+                    <circle cx="32" cy="32" r={r} fill="none" stroke={trackColor} strokeWidth="5" />
+                    {/* Progress arc */}
+                    <circle
+                      cx="32" cy="32" r={r} fill="none"
+                      stroke={color}
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      strokeDasharray={`${circ}`}
+                      strokeDashoffset={`${offset}`}
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)' }}
+                    />
+                  </svg>
+                  {/* Emoji center */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span style={{ fontSize: 22, lineHeight: 1 }}>{pInfo.icon}</span>
+                  </div>
+                </div>
+                {/* Pct */}
+                <span className="text-xs font-mono font-bold leading-none" style={{ color }}>{d.pct}%</span>
+                {/* Name */}
+                <p className="text-[9px] text-muted-foreground text-center leading-tight" style={{ minHeight: 24, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {pInfo.name}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
 
       {/* Practice breakdown */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -76,19 +99,21 @@ export function ProgressView({ currentUser, logs, months }: { currentUser: UserR
           {chartData.map((d) => {
             const pInfo = PRACTICES.find((p) => p.id === d.id) || PRACTICES[0];
             return (
-              <div key={d.id} className="p-3.5 border border-border/70 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-4">
+              <div key={d.id} className="p-3.5 border border-border/70 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3">
                 <span className="text-xl shrink-0 leading-none">{pInfo.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between mb-1.5">
-                    <p className="text-sm font-semibold text-foreground truncate">{pInfo.name}</p>
-                    <span className="text-xs font-mono text-muted-foreground font-semibold">{d.done} / {d.target}</span>
-                  </div>
+                  {/* Baris 1: Nama amalan penuh */}
+                  <p className="text-sm font-semibold text-foreground mb-1 leading-snug">{pInfo.name}</p>
+                  {/* Baris 2: Progress bar + stats */}
                   <ProgressBar value={d.pct} />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] font-mono text-muted-foreground">{d.done} / {d.target} hari</span>
+                    <span className={`text-[11px] font-mono font-bold
+                      ${d.pct >= 80 ? "text-emerald-500" : d.pct >= 50 ? "text-primary" : "text-destructive"}`}>
+                      {d.pct}%
+                    </span>
+                  </div>
                 </div>
-                <span className={`text-xs font-mono font-semibold w-10 text-right shrink-0
-                  ${d.pct >= 80 ? "text-emerald-500" : d.pct >= 50 ? "text-primary" : "text-destructive"}`}>
-                  {d.pct}%
-                </span>
               </div>
             );
           })}

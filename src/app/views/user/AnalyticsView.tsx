@@ -4,7 +4,7 @@ import { getActiveMonth, dateKey, completedDays, pct, getShortPracticeName } fro
 import { AvatarBadge } from "../../components/shared/AvatarBadge";
 import { ProgressBar } from "../../components/shared/ProgressBar";
 import { ChevronDown, Download } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 
 export function AnalyticsView({ currentUser, logs, allUsers, months, onNavigateToPrint }: {
   currentUser: UserRecord; logs: DailyLog[]; allUsers: UserRecord[]; months: MonthRecord[];
@@ -154,78 +154,78 @@ export function AnalyticsView({ currentUser, logs, allUsers, months, onNavigateT
         ))}
       </div>
 
-      {/* Daily trend chart */}
+      {/* 📈 Daily trend — Area Chart */}
       <div className="bg-card border border-border rounded-xl p-4 md:p-5 mb-6 shadow-sm overflow-hidden">
-        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold mb-4">Daily practice count — {month.label}</p>
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={trendData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} opacity={0.4} />
-            <XAxis dataKey="day" tick={{ fill: "var(--muted-foreground)", fontSize: 9, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} interval={4} />
-            <YAxis domain={[0, PRACTICES.length]} tick={{ fill: "var(--muted-foreground)", fontSize: 9, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} width={20} />
-            <Tooltip 
-              contentStyle={{ 
-                background: "var(--card)", 
-                border: "1px solid var(--border)", 
-                borderRadius: 8, 
-                fontSize: 11, 
-                fontFamily: "Plus Jakarta Sans", 
-                color: "var(--foreground)" 
-              }} 
-              cursor={{ stroke: "var(--border)", strokeWidth: 1 }} 
+        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold mb-4">Tren Harian — {month.label}</p>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} opacity={0.35} />
+            <XAxis dataKey="day" tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} interval={4} />
+            <YAxis domain={[0, PRACTICES.length]} tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
+            <Tooltip
+              contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11, color: "var(--foreground)" }}
+              cursor={{ stroke: "var(--primary)", strokeWidth: 1, strokeDasharray: "4 2" }}
             />
-            <Line type="monotone" dataKey="completed" stroke="var(--primary)" strokeWidth={2} dot={false} name="Completed" />
-          </LineChart>
+            <Area type="monotone" dataKey="completed" stroke="var(--primary)" strokeWidth={2} fill="url(#areaGrad)" dot={false} name="Amalan selesai" />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Monthly Overview Bar Chart */}
+      {/* 🕷️ Radar Chart — Spider Web */}
       <div className="bg-card border border-border rounded-xl p-4 md:p-5 mb-6 shadow-sm overflow-hidden">
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold">Grafik Capaian Bulanan (Semua Amalan)</p>
-            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">Perbandingan realisasi vs target untuk semua amalan pada bulan {month.label}</p>
+            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground font-semibold">Peta Capaian</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{month.label} — semua amalan dalam satu pandangan</p>
           </div>
-          <div className="flex gap-3 text-[10px] font-mono text-muted-foreground no-pdf">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <span>Realisasi</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-secondary/80" />
-              <span>Target</span>
-            </div>
-          </div>
+          <span className="text-[10px] font-mono bg-primary/10 text-primary px-2 py-1 rounded-full font-semibold">{overall}% rata-rata</span>
         </div>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={summaryData.map(d => ({ name: getShortPracticeName(d.name), done: d.done, target: d.target }))} barSize={12} barGap={4} margin={{ bottom: 45, left: -20, right: 10, top: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} opacity={0.4} />
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: "var(--muted-foreground)", fontSize: 8.5 }} 
-              angle={-45} 
-              textAnchor="end" 
-              interval={0}
-              height={55}
-              axisLine={false} 
-              tickLine={false} 
+          <RadarChart
+            data={summaryData.map((d) => ({ subject: d.icon + " " + getShortPracticeName(d.name), progress: d.progress, fullMark: 100 }))}
+            margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
+          >
+            <defs>
+              <radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.05} />
+              </radialGradient>
+            </defs>
+            <PolarGrid stroke="var(--border)" strokeOpacity={0.5} />
+            <PolarAngleAxis
+              dataKey="subject"
+              tick={{ fill: "var(--muted-foreground)", fontSize: 8.5, fontFamily: "Plus Jakarta Sans" }}
+              tickLine={false}
             />
-            <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} width={24} />
-            <Tooltip 
-              contentStyle={{ 
-                background: "var(--card)", 
-                border: "1px solid var(--border)", 
-                borderRadius: 8, 
-                fontSize: 11, 
-                fontFamily: "Plus Jakarta Sans", 
-                color: "var(--foreground)" 
-              }} 
-              cursor={{ fill: "var(--secondary)", opacity: 0.15 }} 
+            <PolarRadiusAxis
+              angle={90}
+              domain={[0, 100]}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 8 }}
+              axisLine={false}
+              tickCount={4}
             />
-            <Bar dataKey="target" fill="var(--secondary)" opacity={0.4} radius={[2,2,0,0]} name="Target" />
-            <Bar dataKey="done" fill="var(--primary)" radius={[2,2,0,0]} name="Realisasi" />
-          </BarChart>
+            <Radar
+              name="Capaian"
+              dataKey="progress"
+              stroke="var(--primary)"
+              strokeWidth={2}
+              fill="url(#radarGrad)"
+              dot={{ r: 3, fill: "var(--primary)", strokeWidth: 0 }}
+            />
+            <Tooltip
+              contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11, color: "var(--foreground)" }}
+              formatter={(v: number) => [`${v}%`, "Capaian"]}
+            />
+          </RadarChart>
         </ResponsiveContainer>
       </div>
+
 
       {/* 5 Lowest and 5 Highest practices */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -237,16 +237,17 @@ export function AnalyticsView({ currentUser, logs, allUsers, months, onNavigateT
           </div>
           <div className="p-4 space-y-3">
             {lowestPractices.map((d) => (
-              <div key={d.id} className="p-3 border border-border/80 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3.5">
+              <div key={d.id} className="p-3 border border-border/80 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3">
                 <span className="text-xl shrink-0 leading-none select-none">{d.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs font-semibold text-foreground truncate">{d.name}</p>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">{d.done} / {d.target} hari</span>
-                  </div>
+                  {/* Nama penuh */}
+                  <p className="text-xs font-semibold text-foreground mb-1 leading-snug">{d.name}</p>
                   <ProgressBar value={d.progress} size="sm" />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] font-mono text-muted-foreground">{d.done} / {d.target} hari</span>
+                    <span className="text-[10px] font-mono font-bold text-destructive">{d.progress}%</span>
+                  </div>
                 </div>
-                <span className="text-xs font-mono font-bold text-destructive w-10 text-right shrink-0">{d.progress}%</span>
               </div>
             ))}
           </div>
@@ -260,16 +261,17 @@ export function AnalyticsView({ currentUser, logs, allUsers, months, onNavigateT
           </div>
           <div className="p-4 space-y-3">
             {highestPractices.map((d) => (
-              <div key={d.id} className="p-3 border border-border/80 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3.5">
+              <div key={d.id} className="p-3 border border-border/80 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3">
                 <span className="text-xl shrink-0 leading-none select-none">{d.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs font-semibold text-foreground truncate">{d.name}</p>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">{d.done} / {d.target} hari</span>
-                  </div>
+                  {/* Nama penuh */}
+                  <p className="text-xs font-semibold text-foreground mb-1 leading-snug">{d.name}</p>
                   <ProgressBar value={d.progress} size="sm" />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] font-mono text-muted-foreground">{d.done} / {d.target} hari</span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-500">{d.progress}%</span>
+                  </div>
                 </div>
-                <span className="text-xs font-mono font-bold text-emerald-500 w-10 text-right shrink-0">{d.progress}%</span>
               </div>
             ))}
           </div>
@@ -321,19 +323,20 @@ export function AnalyticsView({ currentUser, logs, allUsers, months, onNavigateT
         </div>
         <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {summaryData.map((d) => (
-            <div key={d.id} className="p-3.5 border border-border/70 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-4">
+            <div key={d.id} className="p-3.5 border border-border/70 rounded-xl bg-card hover:bg-secondary/15 transition-colors flex items-center gap-3">
               <span className="text-xl shrink-0 leading-none">{d.icon}</span>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between mb-1.5">
-                  <p className="text-sm font-semibold text-foreground truncate">{d.name}</p>
-                  <span className="text-xs font-mono text-muted-foreground font-semibold">{d.done} / {d.target} days</span>
-                </div>
+                {/* Nama penuh */}
+                <p className="text-sm font-semibold text-foreground mb-1 leading-snug">{d.name}</p>
                 <ProgressBar value={d.progress} />
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[11px] font-mono text-muted-foreground">{d.done} / {d.target} hari</span>
+                  <span className={`text-[11px] font-mono font-bold
+                    ${d.progress >= 80 ? "text-emerald-500" : d.progress >= 50 ? "text-primary" : "text-destructive"}`}>
+                    {d.progress}%
+                  </span>
+                </div>
               </div>
-              <span className={`text-xs font-mono font-semibold w-10 text-right shrink-0
-                ${d.progress >= 80 ? "text-emerald-500" : d.progress >= 50 ? "text-primary" : "text-destructive"}`}>
-                {d.progress}%
-              </span>
             </div>
           ))}
         </div>
