@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -73,10 +74,16 @@ export async function fetchUsers(): Promise<UserRecord[]> {
   const { data, error } = await supabase
     .from('users')
     .select('*');
-  
+
   if (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching users detail:', error.message, error.details, error.hint, error);
     return [];
+  }
+
+  if (data && data.length > 0) {
+    console.log('DEBUG: Users table columns:', Object.keys(data[0]));
+    console.log('DEBUG: First user row:', data[0]);
+    (window as any).rawUser = data[0];
   }
 
   return (data || []).map((row: any) => ({
